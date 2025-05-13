@@ -1,0 +1,34 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-DMAX7219",
+      "-c",
+      "-o",
+      "build/drivers/spi_max7219.o",
+      "src/drivers/spi_max7219.c"
+    ],
+    "directory": "/home/theo/repos/cloger",
+    "file": "/home/theo/repos/cloger/src/drivers/spi_max7219.c",
+    "output": "/home/theo/repos/cloger/build/drivers/spi_max7219.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-DMAX7219",
+      "-c",
+      "-o",
+      "build/main.o",
+      "src/main.c"
+    ],
+    "directory": "/home/theo/repos/cloger",
+    "file": "/home/theo/repos/cloger/src/main.c",
+    "output": "/home/theo/repos/cloger/build/main.o"
+  }
+]
