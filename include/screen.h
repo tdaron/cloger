@@ -4,6 +4,7 @@
 
 void screen_init();
 
+void screen_tell_text(String_View text);
 void screen_draw_text(String_View text);
 
 void screen_dispose();

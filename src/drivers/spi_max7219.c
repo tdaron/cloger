@@ -1,49 +1,166 @@
 #include <stdint.h>
+#include <string.h>
 #ifdef MAX7219
 #include <fcntl.h>
 #include <screen.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <linux/spi/spidev.h>
+#include <sys/ioctl.h>
+
+#define MODULE_COUNT 4
 
 // Private API (head)
 int fd;
-char font[128][8];
-void send_message(uint8_t addr, uint8_t msg);
+uint8_t font[128][8];
+uint8_t screen[MODULE_COUNT][8] = {0};
+void clear_screen();
+void draw_screen();
+void max7219_init();
 
 // Public API
 void screen_init() {
+#ifdef MAX7219_DUMMY
   fd = open("/tmp/fake_spi", O_RDWR);
+#else
+  fd = open("/dev/spidev0.0", O_RDWR);
+#endif
   if (fd < 0) {
     perror("[MAX7219] Unable to open spi\n");
     exit(EXIT_FAILURE);
   }
+  max7219_init();
 }
 
 void screen_draw_text(String_View text) {
-  size_t len = text.count;
-  size_t max_scroll = len - 4;
-  for (size_t k = 0; k < max_scroll; k++) {
-    for (size_t j = 0; j < 8; j++) {
-      for (size_t i = 0; i < text.count; i++) {
-        if (i >= 5)
-          break; // do not support scrolling yet.
-        char *letter = font[(size_t)text.data[4 - (i - k)]];
-        send_message(j + 1, letter[j]);
+  clear_screen();
+  for (int i = 0; i < MODULE_COUNT; i++) {
+    for (int j = 0; j < 8; j++) {
+      screen[i][j] = font[(size_t)text.data[i]][j];
+    }
+  }
+  draw_screen();
+}
+
+void screen_tell_text(String_View text) {
+  // TODO: Make text start at the right
+  uint8_t offset = 0;
+  uint8_t c_offset = 0;
+  while (c_offset < text.count) {
+    clear_screen();
+    for (int i = 0; i < MODULE_COUNT; i++) {
+      for (int j = 0; j < 8; j++) {
+        if (offset == 8) {
+          offset = 0;
+          c_offset++;
+        }
+        size_t idx = i + c_offset;
+        uint8_t* curr_char;
+        uint8_t* next_char;
+        if (idx >= text.count) {
+          curr_char = (uint8_t*)font;
+          next_char = curr_char;
+        } else {
+          curr_char = (uint8_t*)font[(size_t)text.data[idx]];
+          if (idx < text.count-1) {
+            next_char = (uint8_t*)font[(size_t)text.data[idx+1]];
+          } else {
+            next_char = (uint8_t*)font;
+          }
+        }
+        screen[i][j] |= curr_char[j] >> (offset % 8);
+        if (i <= (MODULE_COUNT-1)) {
+          screen[i][j] |= next_char[j] << (8 - (offset % 8));
+        }
+
       }
     }
-    usleep(100000);
+    draw_screen();
+    usleep(20000);
+    offset++;
   }
 }
 
 void screen_dispose() { close(fd); }
 
 // Private API (impl)
-void send_message(uint8_t addr, uint8_t msg) {
-  write(fd, &addr, 1);
-  write(fd, &msg, 1);
+
+#ifdef MAX7219_DUMMY
+void send_message(uint8_t tx[MODULE_COUNT*2]) {
+  write(fd, tx, MODULE_COUNT*2);
+}
+void broadcast_message(uint8_t addr, uint8_t data) {
+  for (int i = 0; i < MODULE_COUNT; i++) {
+    write(fd, &addr, 1);
+    write(fd, &data, 1);
+  }
+}
+#else
+void send_message(uint8_t tx[MODULE_COUNT*2]) {
+  struct spi_ioc_transfer tr = {
+    .tx_buf = (unsigned long)tx,
+    .rx_buf = 0,
+    .len = MODULE_COUNT*2,
+    .delay_usecs = 0,
+    .speed_hz = 1000000,
+    .bits_per_word = 8
+  };
+  if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
+    perror("SPI: ioctl failed");
+    exit(1);
+  }
+}
+void broadcast_message(uint8_t addr, uint8_t data) {
+    uint8_t tx[MODULE_COUNT * 2];
+    for (int i = 0; i < MODULE_COUNT; i++) {
+        tx[i * 2] = addr;
+        tx[i * 2 + 1] = data;
+    }
+
+    struct spi_ioc_transfer tr = {
+        .tx_buf = (unsigned long)tx,
+        .rx_buf = 0,
+        .len = sizeof(tx),
+        .delay_usecs = 0,
+        .speed_hz = 10000000,
+        .bits_per_word = 8,
+    };
+
+    if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
+        perror("SPI: ioctl failed");
+        exit(1);
+    }
 }
 
-char font[128][8] = {
+#endif
+void max7219_init() {
+    broadcast_message(0x0F, 0x00); // Disable display test
+    broadcast_message(0x0C, 0x01); // Shutdown = normal operation
+    broadcast_message(0x0B, 0x07); // Scan limit = all digits (0–7)
+    broadcast_message(0x0A, 0x08); // Intensity: medium
+    broadcast_message(0x09, 0x00); // Decode mode: none
+    clear_screen();
+    draw_screen();
+}
+
+void draw_screen() {
+  // For each row
+  for (int i = 0; i < 8; i++) {
+    uint8_t tx[MODULE_COUNT*2];
+    // For each led display
+    for (int j = 0; j < MODULE_COUNT; j++) {
+      tx[j*2] = i+1;
+      tx[j*2+1] = screen[MODULE_COUNT-1-j][7-i]; // Screen shall be send reversed
+    }
+    send_message(tx);
+  }
+}
+
+void clear_screen() {
+  memset(screen, 0, MODULE_COUNT*8);
+}
+
+uint8_t font[128][8] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // U+0000 (nul)
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // U+0001
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // U+0002

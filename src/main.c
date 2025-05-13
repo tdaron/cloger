@@ -5,7 +5,7 @@
 #include <unistd.h>
 int main() {
   screen_init();
-  screen_draw_text(sv_from_cstr("Hello, World !"));
+  screen_tell_text(sv_from_cstr("Hello, World ! I am a cool clock !"));
   sleep(1);
   while (true) {
     time_t t;
@@ -17,7 +17,7 @@ int main() {
     tm_info = localtime(&t);
 
     // Format time as "HH:MM"
-    strftime(time_str, sizeof(time_str), "xZytz", tm_info);
+    strftime(time_str, sizeof(time_str), "%H%M", tm_info);
     screen_draw_text(sv_from_cstr(time_str));
     sleep(1);
   }

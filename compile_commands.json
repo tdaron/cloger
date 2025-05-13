@@ -1,11 +1,12 @@
 [
   {
     "arguments": [
-      "/usr/bin/clang",
+      "/usr/bin/gcc",
       "-Wall",
       "-Wextra",
       "-Iinclude",
       "-DMAX7219",
+      "-DMAX7219_DUMMY",
       "-c",
       "-o",
       "build/drivers/spi_max7219.o",
@@ -17,11 +18,29 @@
   },
   {
     "arguments": [
-      "/usr/bin/clang",
+      "/usr/bin/gcc",
       "-Wall",
       "-Wextra",
       "-Iinclude",
       "-DMAX7219",
+      "-DMAX7219_DUMMY",
+      "-c",
+      "-o",
+      "build/drivers/raw_terminal.o",
+      "src/drivers/raw_terminal.c"
+    ],
+    "directory": "/home/theo/repos/cloger",
+    "file": "/home/theo/repos/cloger/src/drivers/raw_terminal.c",
+    "output": "/home/theo/repos/cloger/build/drivers/raw_terminal.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-DMAX7219",
+      "-DMAX7219_DUMMY",
       "-c",
       "-o",
       "build/main.o",
