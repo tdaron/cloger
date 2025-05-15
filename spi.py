@@ -29,6 +29,7 @@ def print_display():
             # if col > 0 and col % 8 == 0:
             #     line += "|"  # space between modules
             line += "█" if display[row][col] else " "
+            # line += "●" if display[row][col] else " "
         print(line)
     print("=" * (DISPLAY_WIDTH))
 def main():
