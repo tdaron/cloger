@@ -13,7 +13,7 @@
 
 // Private API (head)
 uint8_t screen_offset;
-uint8_t screen_row = 0; // Describes which COLUMN we are in
+uint8_t screen_col = 0; // Describes which COLUMN we are in
 int fd;
 uint8_t font[128][8];
 uint8_t small_font[256][6];
@@ -158,18 +158,18 @@ void draw_screen_graph(uint8_t *graph, uint8_t width, uint8_t height) {
   int left_to_draw = width;
   int align = (8-height)/2;
   while (left_to_draw > 0) {
-    uint8_t current_module = screen_row / 8;
+    uint8_t current_module = screen_col / 8;
     if (current_module > MODULE_COUNT-1) {
       // ignoring char, out of screen
       break;
     }
-    uint8_t padding = screen_row % 8;
+    uint8_t padding = screen_col % 8;
     uint8_t drawn = MIN(left_to_draw, 8-padding);
     // For each column we need to draw
     for (int i = 0; i < height; i++) {
       screen[current_module * 8 + i + align] |= (graph[i] >> (8-left_to_draw)) << (padding);
     }
-    screen_row += drawn;
+    screen_col += drawn;
     left_to_draw -= drawn;
   }
 }
@@ -190,10 +190,11 @@ void draw_screen() {
 
 void clear_screen() {
   screen_offset = 0;
-  screen_row = 0;
+  screen_col = 0;
   memset(screen, 0, MODULE_COUNT * 8);
 }
 
+// Credits: https://github.com/dhepper/font8x8
 uint8_t font[128][8] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // U+0000 (nul)
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // U+0001
@@ -325,6 +326,7 @@ uint8_t font[128][8] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}  // U+007F
 };
 
+// Credits: https://github.com/basti79/LCD-fonts/blob/master/4x6_horizontal_LSB_1.h
 uint8_t small_font[256][6] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // 0x00
     {0x40, 0xA0, 0xE0, 0xA0, 0x40, 0x00}, // 0x01
