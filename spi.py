@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+
 FIFO_PATH = "/tmp/fake_spi"
 MODULE_COUNT = 4
 DISPLAY_WIDTH = MODULE_COUNT*8
@@ -25,11 +27,10 @@ def print_display():
         line = ""
         for col in range(DISPLAY_WIDTH):
             # if col > 0 and col % 8 == 0:
-            #     line += " "  # space between modules
+            #     line += "|"  # space between modules
             line += "█" if display[row][col] else " "
         print(line)
-    print("=" * (DISPLAY_WIDTH + MODULE_COUNT - 1))
-
+    print("=" * (DISPLAY_WIDTH))
 def main():
     if not os.path.exists(FIFO_PATH):
         os.mkfifo(FIFO_PATH)
@@ -38,6 +39,7 @@ def main():
         while True:
             packet = fifo.read(BYTES_PER_UPDATE)
             if len(packet) != BYTES_PER_UPDATE:
+                time.sleep(0.5)
                 continue
             for i in range(MODULE_COUNT):
                 addr = packet[i * 2]
@@ -47,6 +49,7 @@ def main():
                     module_data[module_index][addr - 1] = data
             update_display()
             print_display()
+
 
 if __name__ == "__main__":
     try:
