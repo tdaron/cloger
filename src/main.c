@@ -6,7 +6,7 @@
 #include <unistd.h>
 int main() {
   screen_init();
-  // screen_tell_text(sv_from_cstr("Hello, World ! I am cloger, a cool clock !"));
+  screen_tell_text(sv_from_cstr("Hello, World ! I am cloger, a cool clock !"));
   int i = 1;
   while (true) {
     time_t t;
@@ -19,9 +19,9 @@ int main() {
 
     // Format time as "HH:MM"
     if (i) {
-    strftime(time_str, sizeof(time_str), " %H:%M ", tm_info);
+    strftime(time_str, sizeof(time_str), "%H:%M ", tm_info);
     } else {
-    strftime(time_str, sizeof(time_str), " %H %M ", tm_info);
+    strftime(time_str, sizeof(time_str), "%H %M ", tm_info);
       
     }
     screen_draw_text(sv_from_cstr(time_str));

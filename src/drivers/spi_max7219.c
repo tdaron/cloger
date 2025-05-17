@@ -10,10 +10,10 @@
 
 #define MODULE_COUNT 4
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 // Private API (head)
-uint8_t screen_offset;
-uint8_t screen_col = 0; // Describes which COLUMN we are in
+int screen_col = 0; // Describes which COLUMN we are in
 int fd;
 uint8_t font[128][8];
 uint8_t medium_font[256][8];
@@ -29,7 +29,8 @@ uint8_t screen[MODULE_COUNT * 8] = {0}; // ROW PER ROW, MODULE PER MODULE
 void clear_screen();
 void draw_screen();
 void max7219_init();
-void draw_screen_graph(uint8_t *graph, uint8_t width, uint8_t height);
+int draw_screen_graph(uint8_t *graph, uint8_t width, uint8_t height,
+                       int offset);
 
 // Public API
 void screen_init() {
@@ -48,51 +49,29 @@ void screen_init() {
 void screen_draw_text(String_View text) {
   clear_screen();
   for (int i = 0; i < (int)text.count; i++) {
-    // for (int j = 0; j < 8; j++) {
-    //   screen[i * 8 + j] = font[(size_t)text.data[i]][j];
-    // }
-    draw_screen_graph(medium_font[(size_t)text.data[i]], 5, 8);
-    // draw_screen_graph(small_font[(size_t)text.data[i]], 4, 6);
+    draw_screen_graph(small_font[(size_t)text.data[i]], 4, 6, 0);
   }
   draw_screen();
 }
 
 void screen_tell_text(String_View text) {
-  // TODO: Make text start at the right
-  uint8_t offset = 0;
-  uint8_t c_offset = 0;
-  while (c_offset < text.count) {
+  clear_screen();
+  draw_screen();
+  usleep(700000);
+  uint8_t font_width = 8; // TODO: One struct per font
+  int total_size = (int)text.count * font_width;
+  for (int offset = MODULE_COUNT * 8; offset > -total_size; offset--) {
     clear_screen();
-    for (int i = 0; i < MODULE_COUNT; i++) {
-      for (int j = 0; j < 8; j++) {
-        if (offset == 8) {
-          offset = 0;
-          c_offset++;
-        }
-        size_t idx = i + c_offset;
-        uint8_t *curr_char;
-        uint8_t *next_char;
-        if (idx >= text.count) {
-          curr_char = (uint8_t *)font;
-          next_char = curr_char;
-        } else {
-          curr_char = (uint8_t *)font[(size_t)text.data[idx]];
-          if (idx < text.count - 1) {
-            next_char = (uint8_t *)font[(size_t)text.data[idx + 1]];
-          } else {
-            next_char = (uint8_t *)font;
-          }
-        }
-        screen[i * 8 + j] |= curr_char[j] >> (offset % 8);
-        if (i <= (MODULE_COUNT - 1)) {
-          screen[i * 8 + j] |= next_char[j] << (8 - (offset % 8));
-        }
+    for (int i = 0; i < (int)text.count; i++) {
+      if (draw_screen_graph(font[(size_t)text.data[i]], font_width, 8, offset) == 1) {
+        // overflowed. no need to draw next chars
+        break;
       }
     }
     draw_screen();
-    usleep(20000);
-    offset++;
+    usleep(15000);
   }
+  usleep(700000);
 }
 
 void screen_dispose() { close(fd); }
@@ -155,17 +134,25 @@ void max7219_init() {
   draw_screen();
 }
 
-void draw_screen_graph(uint8_t *graph, uint8_t width, uint8_t height) {
+int draw_screen_graph(uint8_t *graph, uint8_t width, uint8_t height,
+                       int offset) {
   int left_to_draw = width;
   int align = (8 - height) / 2;
   while (left_to_draw > 0) {
-    uint8_t current_module = screen_col / 8;
-    if (current_module > MODULE_COUNT - 1) {
-      // ignoring char, out of screen
-      break;
+    int pos = screen_col + offset;
+    if (pos < 0) {
+      int to_discard = MIN(-pos, left_to_draw);
+      left_to_draw -= to_discard;
+      screen_col += to_discard;
+      continue;
     }
-    uint8_t padding = screen_col % 8;
-    uint8_t drawn = MIN(left_to_draw, 8 - padding);
+    int current_module = pos / 8;
+    if (current_module > MODULE_COUNT - 1) {
+      return 1;
+    }
+    int padding = (pos) % 8;
+
+    int drawn = MIN(left_to_draw, 8 - padding);
     // For each column we need to draw
     for (int i = 0; i < height; i++) {
       screen[current_module * 8 + i + align] |= (graph[i] >> (8 - left_to_draw))
@@ -174,6 +161,7 @@ void draw_screen_graph(uint8_t *graph, uint8_t width, uint8_t height) {
     screen_col += drawn;
     left_to_draw -= drawn;
   }
+  return 0;
 }
 
 void draw_screen() {
@@ -191,7 +179,6 @@ void draw_screen() {
 }
 
 void clear_screen() {
-  screen_offset = 0;
   screen_col = 0;
   memset(screen, 0, MODULE_COUNT * 8);
 }

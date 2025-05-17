@@ -26,8 +26,8 @@ def print_display():
     for row in range(DISPLAY_HEIGHT):
         line = ""
         for col in range(DISPLAY_WIDTH):
-            # if col > 0 and col % 8 == 0:
-            #     line += "|"  # space between modules
+            if col > 0 and col % 8 == 0:
+                line += ""  # space between modules
             line += "█" if display[row][col] else " "
             # line += "●" if display[row][col] else " "
         print(line)
