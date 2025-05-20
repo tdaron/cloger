@@ -8,6 +8,10 @@ void screen_draw_text(String_View text) {
   system("clear");
   printf(SV_Fmt"\n", SV_Arg(text));
 }
+void screen_tell_text(String_View text) {
+  system("clear");
+  printf(SV_Fmt"\n", SV_Arg(text));
+}
 
 void screen_dispose() {}
 
